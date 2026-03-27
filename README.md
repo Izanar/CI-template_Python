@@ -45,3 +45,5 @@ uv run cli upgrade
 - **Grafana**: http://localhost:3000 (admin/admin)
 - **Prometheus**: http://localhost:9090
 - **Loki**: http://localhost:3100
+
+[![pipeline status](https://gitlab.com/Izanar/CI-template/badges/main/pipeline.svg)](https://gitlab.com/Izanar/CI-template/-/commits/main)
