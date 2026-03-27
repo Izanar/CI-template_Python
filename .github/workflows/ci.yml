@@ -7,50 +7,72 @@ on:
     branches: [dev, stage, main]
 
 jobs:
+  # 1. ОТДЕЛЬНАЯ ДЖОБА ДЛЯ ПРЕКОММИТА (LINT)
+  lint:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.13'
+
+      - name: Install UV
+        uses: astral-sh/setup-uv@v5
+
+      - name: Install dependencies
+        run: uv sync --dev
+
+      - name: Run pre-commit (Lint)
+        # Эта команда запустит все твои проверки стиля на сервере
+        run: uv run pre-commit run --all-files
+
+  # 2. ДЖОБА ДЛЯ ТЕСТОВ (зависит от успеха линта)
   test:
+    needs: lint # Тесты не начнутся, пока линт не пройдет успешно
     runs-on: ubuntu-latest
     permissions:
       contents: write
       pull-requests: write
 
     steps:
-    - name: Checkout code
-      uses: actions/checkout@v4
+      - name: Checkout code
+        uses: actions/checkout@v4
 
-    - name: Set up Python
-      uses: actions/setup-python@v4
-      with:
-        python-version: '3.13'
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.13'
 
-    - name: Install UV
-      uses: astral-sh/setup-uv@v2
+      - name: Install UV
+        uses: astral-sh/setup-uv@v5
 
-    - name: Install dependencies
-      run: uv sync --dev
+      - name: Install dependencies
+        run: uv sync --dev
 
-    - name: Run tests with coverage
-      run: |
-        uv run pytest src/tests/ -n auto --cov=src/app --cov-report=html --cov-report=term
+      - name: Run tests with coverage
+        run: |
+          uv run pytest src/tests/ -n auto --cov=src/app --cov-report=html --cov-report=term
 
-    - name: Extract coverage percentage
-      id: coverage
-      run: |
-        COVERAGE=$(uv run coverage report --show-missing | grep TOTAL | awk '{print $NF}' | sed 's/%//')
-        echo "COVERAGE_PERCENT=$COVERAGE" >> $GITHUB_ENV
+      - name: Extract coverage percentage
+        run: |
+          COVERAGE=$(uv run coverage report | grep TOTAL | awk '{print $NF}' | sed 's/%//')
+          echo "COVERAGE_PERCENT=$COVERAGE" >> $GITHUB_ENV
 
-    - name: Comment coverage on PR
-      if: github.event_name == 'pull_request'
-      uses: peter-evans/create-or-update-comment@v4
-      with:
-        issue-number: ${{ github.event.pull_request.number }}
-        body: |
-          ### Code Coverage Report
-          **Coverage**: ${{ env.COVERAGE_PERCENT }}%
-          The test suite covered ${{ env.COVERAGE_PERCENT }}% of the `app` directory.
-          📊 Check the detailed [coverage report](https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}) in the workflow artifacts.
+      - name: Comment coverage on PR
+        if: github.event_name == 'pull_request'
+        uses: peter-evans/create-or-update-comment@v4
+        with:
+          issue-number: ${{ github.event.pull_request.number }}
+          body: |
+            ### Code Coverage Report
+            **Coverage**: ${{ env.COVERAGE_PERCENT }}%
+            📊 Check the detailed [coverage report](https://github.com{{ github.repository }}/actions/runs/${{ github.run_id }}) in the workflow artifacts.
 
-    - name: Upload coverage HTML report
-      uses: actions/upload-artifact@v4
-      with:
-        name: coverage-html
-        path: htmlcov/
+      - name: Upload coverage HTML report
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage-html
+          path: htmlcov/
