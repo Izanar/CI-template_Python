@@ -1,0 +1,40 @@
+image: python:3.13
+
+# Ці команди виконаються ПЕРЕД кожним завданням (job)
+before_script:
+  - apt-get update && apt-get install -y curl
+  - curl -LsSf https://astral.sh/uv/install.sh | sh
+  - export PATH="$HOME/.local/bin:$HOME/.cargo/bin:$PATH"
+  - uv sync --dev
+
+stages:
+  - lint
+  - test
+
+lint_project:
+  stage: lint
+  script:
+    - uv run pre-commit run --all-files
+  only:
+    - dev
+    - stage
+    - main
+    - merge_requests
+
+test_project:
+  stage: test
+  script:
+    - uv run pytest src/tests/ -n auto --cov=src/app --cov-report=html --cov-report=term
+    - 'COVERAGE=$(uv run coverage report | grep TOTAL | awk "{print \$NF}")'
+    - echo "Total Coverage:$COVERAGE"
+
+  artifacts:
+    paths:
+      - htmlcov/
+    expire_in: 1 week
+  coverage: '/TOTAL.*\s+(\d+\%)/'
+  only:
+    - dev
+    - stage
+    - main
+    - merge_requests
