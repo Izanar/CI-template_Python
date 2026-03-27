@@ -30,8 +30,9 @@ test_project:
     - export PATH="$HOME/.cargo/bin:$PATH"
     - uv sync --dev
     - uv run pytest src/tests/ -n auto --cov=src/app --cov-report=html --cov-report=term
-    - COVERAGE=$(uv run coverage report | grep TOTAL | awk '{print $NF}')
-    - echo "Total Coverage: $COVERAGE"
+    - 'COVERAGE=$(uv run coverage report | grep TOTAL | awk "{print \$NF}")'
+    - echo "Total Coverage:$COVERAGE"
+
   artifacts:
     paths:
       - htmlcov/
