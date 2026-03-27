@@ -1,21 +1,19 @@
 image: python:3.13
 
-variables:
-  UV_VERSION: "0.4"
+# Ці команди виконаються ПЕРЕД кожним завданням (job)
+before_script:
+  - apt-get update && apt-get install -y curl
+  - curl -LsSf https://astral.sh/uv/install.sh | sh
+  - export PATH="$HOME/.cargo/bin:$PATH"
+  - uv sync --dev
 
-# Добавляем стадию линтинга перед тестами
 stages:
   - lint
   - test
 
-# Новое задание для проверки pre-commit
 lint_project:
   stage: lint
   script:
-    - curl -LsSf https://astral.sh | sh
-    - export PATH="$HOME/.cargo/bin:$PATH"
-    - uv sync --dev
-    # Запускаем все проверки pre-commit на сервере
     - uv run pre-commit run --all-files
   only:
     - dev
@@ -26,9 +24,6 @@ lint_project:
 test_project:
   stage: test
   script:
-    - curl -LsSf https://astral.sh | sh
-    - export PATH="$HOME/.cargo/bin:$PATH"
-    - uv sync --dev
     - uv run pytest src/tests/ -n auto --cov=src/app --cov-report=html --cov-report=term
     - 'COVERAGE=$(uv run coverage report | grep TOTAL | awk "{print \$NF}")'
     - echo "Total Coverage:$COVERAGE"
